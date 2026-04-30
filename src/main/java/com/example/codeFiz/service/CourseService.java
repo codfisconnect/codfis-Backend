@@ -6,6 +6,9 @@ import com.example.codeFiz.model.TrainerDTO;
 import com.example.codeFiz.repository.CourseRepo;
 import com.example.codeFiz.repository.StudentsRepo;
 import com.example.codeFiz.repository.TrainerRepo;
+import jakarta.mail.MessagingException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -15,9 +18,21 @@ import java.util.List;
 @Service
 public class CourseService {
 
-    private final CourseRepo courseRepo;
-    private final StudentsRepo studentsRepo;
-    private final TrainerRepo trainerRepo;
+    @Autowired
+     CourseRepo courseRepo;
+
+    @Autowired
+    StudentsRepo studentsRepo;
+
+    @Autowired
+    TrainerRepo trainerRepo;
+
+    @Autowired
+    EmailService emailService;
+
+    @Value("${codfis.admin.email}")
+    private String adminEmail;
+
 
     public CourseService(CourseRepo courseRepo, StudentsRepo studentsRepo, TrainerRepo trainerRepo) {
         this.courseRepo = courseRepo;
@@ -74,7 +89,7 @@ public class CourseService {
         return studentsRepo.findByCourseNameContainingIgnoreCase(courseName);
     }
 
-    public StudentsDTO enrollStudents(String name,
+    public void enrollStudents(String name,
                                       String gender,
                                       String email,
                                       Long mobile,
@@ -86,12 +101,32 @@ public class CourseService {
                 .mobile(mobile)
                 .courseName(courseName)
                 .build();
-        return studentsRepo.save(student);
+         studentsRepo.save(student);
+
+         try {
+             emailService.sendStudentRegistrationToAdmin(
+                     adminEmail,
+                     name,
+                     gender,
+                     email,
+                     mobile,
+                     courseName
+             );
+
+             emailService.sendStudentWelcomeMail(
+                     email,
+                     name,
+                     courseName
+
+             );
+         }catch (Exception e){
+             e.printStackTrace();
+         }
     }
 
-    public StudentsDTO updateStudent(Long id, StudentsDTO updatedStudent) {
-        StudentsDTO existingStudent = studentsRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Student not found with id: " + id));
+    public StudentsDTO updateStudent(Long mobile, StudentsDTO updatedStudent) {
+        StudentsDTO existingStudent = studentsRepo.findById(mobile)
+                .orElseThrow(() -> new RuntimeException("Student not found with id: " + mobile));
 
         existingStudent.setName(updatedStudent.getName());
         existingStudent.setGender(updatedStudent.getGender());
@@ -134,6 +169,38 @@ public class CourseService {
         // trainer.setStatus("PENDING");
 
         trainerRepo.save(trainer);
+
+        try {
+            emailService.sendTrainerApplicationToAdminWithAttachment(
+                    adminEmail,
+                    name,
+                    gender,
+                    email,
+                    mobile,
+                    description,
+                    file.getOriginalFilename(),
+                    file.getContentType(),
+                    file.getBytes()
+            );
+            emailService.sendTrainerWelcomeMail(
+                    email,
+                    name,
+                    mobile,
+                    description
+            );
+        }catch (MessagingException e){
+            e.printStackTrace();
+        }
+    }
+
+    public TrainerDTO getTrainerByMobile(Long mobile) {
+        return trainerRepo.findById(mobile)
+                .orElseThrow(() -> new RuntimeException("Trainer not found with mobile: " + mobile));
+    }
+
+    public TrainerDTO getTrainerResumeByMobile(Long mobile) {
+        return trainerRepo.findById(mobile)
+                .orElseThrow(() -> new RuntimeException("Trainer not found with mobile: " + mobile));
     }
 
     public List<TrainerDTO> appliedTrainers() {
@@ -154,6 +221,11 @@ public class CourseService {
         // only if TrainerDTO has status field
         trainer.setStatus("APPROVED");
 
+        emailService.sendResultOfTrainerApplication(
+                trainer.getEmail(),
+                trainer.getName(),
+                trainer.getStatus()
+        );
         return trainerRepo.save(trainer);
     }
 
@@ -164,7 +236,50 @@ public class CourseService {
         // only if TrainerDTO has status field
         trainer.setStatus("REJECTED");
 
+       try{
+           emailService.sendResultOfTrainerApplication(
+                   trainer.getEmail(),
+                   trainer.getName(),
+                   trainer.getStatus()
+           );
+       }catch (Exception e){
+           throw new RuntimeException(e);
+       }
+
         return trainerRepo.save(trainer);
+    }
+
+    public void sendInterviewMail(com.example.codeFiz.model.InterviewMailRequest request){
+        try {
+            emailService.sendInterviewMail(
+                    request.getToEmail(),
+                    request.getCandidateName(),
+                    request.getSubject(),
+                    request.getInterviewDate(),
+                    request.getInterviewTime(),
+                    request.getInterviewMode(),
+                    request.getMeetingLink(),
+                    request.getMessage()
+            );
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void approveStudent(Long mobile) {
+        StudentsDTO student = studentsRepo.findById(mobile)
+                .orElseThrow(() -> new RuntimeException("Student not found"));
+
+        student.setApprovalStatus("APPROVED");
+        studentsRepo.save(student);
+    }
+
+    public void rejectStudent(Long mobile) {
+        StudentsDTO student = studentsRepo.findById(mobile)
+                .orElseThrow(() -> new RuntimeException("Student not found"));
+
+        student.setApprovalStatus("REJECTED");
+        studentsRepo.save(student);
     }
 
 }

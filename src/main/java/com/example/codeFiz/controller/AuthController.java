@@ -1,8 +1,6 @@
 package com.example.codeFiz.controller;
 
-import com.example.codeFiz.model.LoginRequest;
-import com.example.codeFiz.model.LoginResponse;
-import com.example.codeFiz.model.RegisterRequest;
+import com.example.codeFiz.model.*;
 import com.example.codeFiz.service.AuthService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -31,5 +29,24 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    @PostMapping("/send-otp")
+    public ResponseEntity<String> sendOtp(@RequestBody OtpRequest request) {
+        try {
+            return ResponseEntity.ok(authService.sendOtp(request));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<String> resetPassword(@RequestBody ResetPasswordRequest request) {
+        try {
+            return ResponseEntity.ok(authService.resetPassword(request));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 }

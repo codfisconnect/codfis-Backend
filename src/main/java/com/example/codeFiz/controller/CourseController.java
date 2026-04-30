@@ -3,6 +3,7 @@ package com.example.codeFiz.controller;
 import com.example.codeFiz.model.Course;
 import com.example.codeFiz.model.StudentsDTO;
 import com.example.codeFiz.model.TrainerDTO;
+import com.example.codeFiz.model.InterviewMailRequest;
 import com.example.codeFiz.service.CourseService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -88,9 +89,9 @@ public class CourseController {
         );
     }
 
-    @PutMapping("/student/update/{id}")
-    public ResponseEntity<String> updateStudent(@PathVariable Long id, @RequestBody StudentsDTO student) {
-        courseService.updateStudent(id, student);
+    @PutMapping("/student/update/{mobile}")
+    public ResponseEntity<String> updateStudent(@PathVariable Long mobile, @RequestBody StudentsDTO student) {
+        courseService.updateStudent(mobile, student);
         return ResponseEntity.ok("Student updated successfully");
     }
 
@@ -121,11 +122,39 @@ public class CourseController {
                     .body("File upload failed: " + e.getMessage());
         }
     }
+    @PostMapping("/trainer/sendInterviewMail")
+    public ResponseEntity<String> sendInterviewMail(@RequestBody InterviewMailRequest request){
+
+        try{
+            courseService.sendInterviewMail(request);
+            return ResponseEntity.ok("Interview mail sent successfully");
+        } catch (Exception e){
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to send interview mail: "+ e.getMessage());
+        }
+
+    }
 
     @GetMapping("/trainer/applied")
     public List<TrainerDTO> appliedTrainers() {
         return courseService.appliedTrainers();
     }
+
+    @GetMapping("/trainer/{mobile}")
+    public ResponseEntity<TrainerDTO> getTrainerByMobile(@PathVariable Long mobile) {
+        return ResponseEntity.ok(courseService.getTrainerByMobile(mobile));
+    }
+
+    @GetMapping("/trainer/resume/{mobile}")
+    public ResponseEntity<byte[]> viewTrainerResume(@PathVariable Long mobile) {
+        TrainerDTO trainer = courseService.getTrainerResumeByMobile(mobile);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(trainer.getFileType()))
+                .header("Content-Disposition", "inline; filename=\"" + trainer.getFileName() + "\"")
+                .body(trainer.getResume());
+    }
+
 
     @DeleteMapping("/trainer/delete/{id}")
     public ResponseEntity<String> deleteTrainer(@PathVariable Long id) {
@@ -143,5 +172,17 @@ public class CourseController {
     public ResponseEntity<String> rejectTrainer(@PathVariable Long id) {
         courseService.rejectTrainer(id);
         return ResponseEntity.ok("Trainer rejected successfully");
+    }
+
+    @PutMapping("/student/approve/{mobile}")
+    public ResponseEntity<String> approveStudent(@PathVariable Long mobile) {
+        courseService.approveStudent(mobile);
+        return ResponseEntity.ok("Student approved successfully");
+    }
+
+    @PutMapping("/student/reject/{mobile}")
+    public ResponseEntity<String> rejectStudent(@PathVariable Long mobile) {
+        courseService.rejectStudent(mobile);
+        return ResponseEntity.ok("Student rejected successfully");
     }
 }
