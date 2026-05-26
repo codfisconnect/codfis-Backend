@@ -44,11 +44,8 @@ public class SecurityConfig {
 
                         // public auth APIs
                         .requestMatchers(
-                                "/auth/login",
-                                "/auth/send-otp",
-                                "/auth/reset-password",
-                                "/student-auth/register",
-                                "/student-auth/login"
+                                "/auth/**",
+                                "/student-auth/**"
                         ).permitAll()
 
                         // public website form submission APIs
@@ -57,6 +54,7 @@ public class SecurityConfig {
 
                         // all course/admin APIs require ADMIN role
                         .requestMatchers("/student-auth/profile/**").hasAnyRole("STUDENT", "ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/courses/**").permitAll()
                         .requestMatchers("/courses/**").hasRole("ADMIN")
 
                         // anything else must be authenticated
