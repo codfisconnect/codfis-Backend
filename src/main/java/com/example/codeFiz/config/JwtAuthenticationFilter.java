@@ -28,6 +28,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
+        String path = request.getServletPath();
+
+    if (
+        path.equals("/auth/login") ||
+        path.equals("/auth/send-otp") ||
+        path.equals("/auth/reset-password") ||
+        path.equals("/student-auth/register") ||
+        path.equals("/student-auth/login")
+    ) {
+        filterChain.doFilter(request, response);
+        return;
+    }
+        
         String authHeader = request.getHeader("Authorization");
 
         String token = null;
